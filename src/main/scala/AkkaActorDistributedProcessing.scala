@@ -53,23 +53,26 @@ class ListRandomDivider extends Actor {
     val routees = Vector.fill(4) { // 1, 2, 3, 4 という 4つの数のリスト
       ActorRefRoutee(context.actorOf(Props[RandomDivider])) // 整数一つ一つの処理は処理を子アクターの RandomDividerにまかせる
     }
+    // Router: 複数のアクターを作成した際に、それにどのようにメッセージを送るのかを定義してくれる仕組み
+    // ラウンドロビン: 一つ一つ巡回しながらメッセージを送ってくれるようにする仕組み
     Router(RoundRobinRoutingLogic(), routees)
   }
 
   def receive = {
     case ListDivideRandomMessage(numeratorList) => {
-      listDivideMessageSender = sender()
-      totalAnswerCount = numeratorList.size
-      numeratorList.foreach(n => router.route(DivideRandomMessage(n), self))
+      listDivideMessageSender = sender() // sender() をフィールドに取得
+      totalAnswerCount = numeratorList.size // 取得すべき全体の答えの数を設定
+      numeratorList.foreach(n => router.route(DivideRandomMessage(n), self)) // 各アクターに送信
     }
     case AnswerMessage(num) => { // リストの数を割る数で割った商の合計を取得し、合計を求める
       sum += num
       answerCount += 1
-      if (answerCount == totalAnswerCount) listDivideMessageSender ! sum
+      if (answerCount == totalAnswerCount) listDivideMessageSender ! sum // すべて回答したら合計の整数を返す
     }
   }
 }
 
+// 各アクターを動かす処理
 object RandomDivide extends App {
   val system = ActorSystem("randomDivide")
   val inbox = Inbox.create(system)
